@@ -1,0 +1,106 @@
+.aho:Variable:Ahorros:
+cripto:Variable:Ahorros:Cripto en Binance
+balanz:Variable:Ahorros:Acciones en Balanz
+Liquidacion titulos debito:Variable:Ahorros:Compra Dolares MEP
+Debito por compra de dolares:Variable:Ahorros:Compra Dolares MEP
+
+consorcio:Fijo:Alquiler:Consorcio Pasco 353
+.alq:Fijo:Alquiler:
+
+.com:Variable:Comida:
+havannario:Variable:Comida:Havanna
+Havanna:Variable:Comida:Havanna
+mcdonalds:Variable:Comida:McDonals
+Merpago*milangaco:Variable:Comida:Milanga
+brozziano:Variable:Comida:Empanadas Brozziano
+javierduarte:Variable:Comida:Medialunas
+malvon:Variable:Comida:Malvon Panaderia
+luccianos:Variable:Comida:Luccianos Heladeria
+cafe martinez:Variable:Comida:Cafe Martinez
+chino:Variable:Comida:Chino Tienda
+copetincaterin:Comida:Maquina expendedora
+
+omint:Fijo:Credito:Omint Reintegros
+tarjeta de credito:Fijo:Credito:
+
+Pedidosya:Variable:Delivery:Pedidos Ya
+
+.edu:Fijo:Educacion:
+.exp:Fijo:Expensas:
+
+.fam:Variable:Familia:
+joelit gallardo:Variable:Familia:Remesas a Venezuela
+
+extraccion:Variable:Efectivo:Extraccion de Efectivo
+
+.hog:Variable:Hogar:
+temucom:Variable:Hogar:Temu
+
+Imp.afip:Variable:Impuestos:
+tx internacional:Variable:Impuestos:Comision Compra de Dolar MEP
+sorpresa:Variable:Impuestos:Comision por sorpresa Santander
+servicio de cuenta:Variable:Impuestos:
+Arca:Variable:Impuestos:Monotributo
+ley27743:Variable:Impuestos:
+ley 25.413:Variable:Impuestos:
+sircreb:Variable:Impuestos:Ingresos Brutos SIRCREB
+
+.jue:Variable:Juegos:
+steam:Variable:Juegos:
+
+.mer:Variable:Mercado:
+Merpago*coto:Variable:Mercado:Coto
+carrefour:Variable:Mercado:Carrefour
+
+.med:Variable:Medicina:
+
+.oci:Variable:Ocio:
+santacebada:Variable:Ocio:Santa Cebada Bar
+hoyts:Variable:Ocio:Cine Hoyts
+
+.otr:Variable:Otros:
+
+.per:Variable:Personal:
+peluqueria:Variable:Personal:Barberia
+psico:Variable:Personal:Rosa Psicologa
+barbados:Variable:Personal:Barberia
+
+.pro:Variable:Proyecto:
+serv.digitales:Variable:Proyecto:Impuesto sobre Ingreso de Youtube
+Iva rg 4240:Variable:Proyecto:IVA sobre Ingreso de Youtube
+rg 5617:Variable:Proyecto:Impuesto sobre Publicidad de Youtube
+
+.hon:Fijo:Honorarios:
+botolini matias:Fijo:Honorarios:Contador Matias Ariel
+juan luis castillo gar:Fijo:Honorarios:Contador Sebastian Ganancias
+
+.ser:Fijo:Servicios:
+internet:Fijo:Servicios:Personal Internet
+edesur:Fijo:Servicios:Edesur
+aysa:Fijo:Servicios:Aysa
+/ abl:Fijo:Servicios:ABL
+metrogas:Fijo:Servicios:Metrogas
+
+.sus:Fijo:Suscripciones:
+crun:Fijo:Suscripciones:Crunchyroll
+drive:Fijo:Suscripciones:Google Drive
+meli:Fijo:Suscripciones:Mercado Libre +
+netflix:Fijo:Suscripciones:Netflix
+nflx:Fijo:Suscripciones:Netflix
+spoti:Fijo:Suscripciones:Spotify
+spotify:Fijo:Suscripciones:Spotify
+ytp:Fijo:Suscripciones:Youtube Premium
+Youtube:Fijo:Suscripciones:Youtube Premium
+Tuenti:Fijo:Suscripciones:Tuenti
+
+.tra:Variable:Transporte:
+emova:Variable:Transporte:Emova Subte
+ebanxsa:Variable:Transporte:Uber
+sube viajes:Variable:Transporte:Sube
+Merpago*sube:Variable:Transporte:Sube Recarga
+Visa garpa subte:Variable:Transporte:Promo Visa Subte
+visa garpa buses:Variable:Transporte:Promo Visa Buses
+Visa garpa transporte:Variable:Transporte:Promo Visa Transporte
+Cabify:Variable:Transporte:Cabify
+
+.via:Variable:Viajes:
