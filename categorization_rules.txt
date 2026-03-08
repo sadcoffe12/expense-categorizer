@@ -4,13 +4,17 @@ balanz:Variable:Ahorros:Acciones en Balanz
 Liquidacion titulos debito:Variable:Ahorros:Compra Dolares MEP
 Debito por compra de dolares:Variable:Ahorros:Compra Dolares MEP
 
-consorcio:Fijo:Alquiler:Consorcio Pasco 353
-.alq:Fijo:Alquiler:
+.alq:Fijo:Alquiler:Alquiler Pasco 535
+garcia jorge luis:Fijo:Alquiler:Alquiler Pasco 535
+
+.exp:Fijo:Alquiler:Expensas Pasco 353
+consorcio prop pasco 53:Fijo:Alquiler:Expensas Pasco 353
 
 .com:Variable:Comida:
 havannario:Variable:Comida:Havanna
 Havanna:Variable:Comida:Havanna
-mcdonalds:Variable:Comida:McDonals
+mcdonalds:Variable:Comida:McDonalds
+Mc donalds:Comida:McDonalds
 Merpago*milangaco:Variable:Comida:Milanga
 brozziano:Variable:Comida:Empanadas Brozziano
 javierduarte:Variable:Comida:Medialunas
@@ -18,18 +22,31 @@ malvon:Variable:Comida:Malvon Panaderia
 luccianos:Variable:Comida:Luccianos Heladeria
 cafe martinez:Variable:Comida:Cafe Martinez
 chino:Variable:Comida:Chino Tienda
-copetincaterin:Comida:Maquina expendedora
+*copetincaterin:Comida:Maquina expendedora
+Estancia san francis:Comida:Estancia San Francisco
+rinconnorteno:Comida:Rincón Norteño Empanadas
+Cadore gelato artigian:Comida:Cadore Helados
+Chanchito market:Comida:Chino Tienda
+souriana:Comida:Shawarma
+warrencafe:Comida:Warren Cafe
+warren:Comida:Warren Cafe
+Milanga:Comida:Milanga & Co
+klavalle130:Comida:Kiosko
 
+.cre:Fijo:Credito:
 omint:Fijo:Credito:Omint Reintegros
-tarjeta de credito:Fijo:Credito:
+tarjeta de credito:Fijo:Credito
 
+.del:Variable:Delivery:
 Pedidosya:Variable:Delivery:Pedidos Ya
 
 .edu:Fijo:Educacion:
-.exp:Fijo:Expensas:
 
 .fam:Variable:Familia:
 joelit gallardo:Variable:Familia:Remesas a Venezuela
+remesas:Variable:Familia:Remesas a Venezuela
+manuten:Fijo:Familia:Manutencion de Mama
+manutencion:Fijo:Familia:Manutencion de Mama
 
 extraccion:Variable:Efectivo:Extraccion de Efectivo
 
@@ -51,6 +68,7 @@ steam:Variable:Juegos:
 .mer:Variable:Mercado:
 Merpago*coto:Variable:Mercado:Coto
 carrefour:Variable:Mercado:Carrefour
+Estancia san franciso:Variable:Mercado:Estancia San Francisco
 
 .med:Variable:Medicina:
 
@@ -62,13 +80,16 @@ hoyts:Variable:Ocio:Cine Hoyts
 
 .per:Variable:Personal:
 peluqueria:Variable:Personal:Barberia
-psico:Variable:Personal:Rosa Psicologa
+barbero:Variable:Personal:Barberia
+garrido, sebastian e:Variable:Personal:Barberia
 barbados:Variable:Personal:Barberia
+psico:Variable:Personal:Rosa Psicologa
 
 .pro:Variable:Proyecto:
 serv.digitales:Variable:Proyecto:Impuesto sobre Ingreso de Youtube
 Iva rg 4240:Variable:Proyecto:IVA sobre Ingreso de Youtube
 rg 5617:Variable:Proyecto:Impuesto sobre Publicidad de Youtube
+Google *ads:Variable:Proyecto:Publicidad de Youtube
 
 .hon:Fijo:Honorarios:
 botolini matias:Fijo:Honorarios:Contador Matias Ariel
@@ -78,7 +99,7 @@ juan luis castillo gar:Fijo:Honorarios:Contador Sebastian Ganancias
 internet:Fijo:Servicios:Personal Internet
 edesur:Fijo:Servicios:Edesur
 aysa:Fijo:Servicios:Aysa
-/ abl:Fijo:Servicios:ABL
+abl:Fijo:Servicios:ABL
 metrogas:Fijo:Servicios:Metrogas
 
 .sus:Fijo:Suscripciones:
@@ -90,8 +111,9 @@ nflx:Fijo:Suscripciones:Netflix
 spoti:Fijo:Suscripciones:Spotify
 spotify:Fijo:Suscripciones:Spotify
 ytp:Fijo:Suscripciones:Youtube Premium
-Youtube:Fijo:Suscripciones:Youtube Premium
-Tuenti:Fijo:Suscripciones:Tuenti
+tuenti:Fijo:Suscripciones:Tuenti Manuel
+tuenti m:Fijo:Suscripciones:Tuenti Manuel
+tuenti f:Fijo:Suscripciones:Tuenti Francis
 
 .tra:Variable:Transporte:
 emova:Variable:Transporte:Emova Subte

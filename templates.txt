@@ -3,16 +3,11 @@ HEADER_ROW: 14
 START_ROW: 15
 START_COL: B
 END_COL: H
-COLS_TO_DROP: H,C,E
+COLS_TO_DROP: C, E, H
 ROWS_TO_DROP: 
-COLS_TO_ADD: Periodo(B),Tipo(C),Categoria(C)
----
-TEMPLATE_NAME: Santander Rio v2
-HEADER_ROW: 14
-START_ROW: 15
-START_COL: B
-END_COL: H
-COLS_TO_DROP: H,C,E
-ROWS_TO_DROP: 
-COLS_TO_ADD: Ano(C), Mes(D), Dia(E)
+COLS_TO_ADD: Periodo, Año, Mes, Dia, Notas, Tipo, Categoria
+ORDERED_COLS: Fecha, Periodo, Año, Mes, Dia, Descripcion, Notas, Tipo, Categoria, Caja de Ahorro, Cuenta Corriente
+SOURCE_COL: Descripcion
+TYPE_COL: Tipo
+CAT_COL: Categoria
 ---
