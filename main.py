@@ -4,26 +4,9 @@ import os
 import unicodedata
 import re
 
-RULES_FILE = "categorization_rules.txt"
+RULES_FILE = "categorization_rules.csv"
 TEMPLATES_FILE = "templates.txt"
 
-def load_rules():
-    #Carga las reglas de categorización desde el archivo de texto en orden.
-    if not os.path.exists(RULES_FILE):
-        return []
-    
-    rules = []
-    try:
-        with open(RULES_FILE, 'r', encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split(':', 3)
-                if len(parts) == 4:
-                    keyword, type, category, new_description = parts
-                    rules.append((keyword.lower(), type, category, None if new_description == 'None' else new_description if new_description else None))
-    except Exception as e:
-        print(f"Error al cargar las reglas: {e}")
-        return []
-    return rules
 
 def normalize_text(text):
     if not isinstance(text, str):
@@ -61,68 +44,89 @@ def select_column(df, prompt, default_name, template_suggestion=None):
     
     return user_input
 
+def load_rules():
+    if not os.path.exists(RULES_FILE):
+        df_empty = pd.DataFrame(columns=['keyword', 'type', 'category', 'new_description'])
+        df_empty.to_csv(RULES_FILE, index=False, encoding="utf-8")
+        return []
+    
+    try:
+        # Cargamos y convertimos TODO a string de entrada para evitar floats/NaN
+        df_rules = pd.read_csv(RULES_FILE, encoding="utf-8").fillna("")
+        
+        rules = []
+        for _, row in df_rules.iterrows():
+            keyword = str(row['keyword']).lower().strip()
+            # Si la keyword está vacía (fila accidental en CSV), la saltamos
+            if not keyword:
+                continue
+                
+            new_desc = str(row['new_description']).strip()
+            # Si está vacío o es un nulo de pandas, pasamos None real
+            val_new_desc = new_desc if new_desc not in ["", "nan", "None", "NaN"] else None
+            
+            rules.append((
+                keyword, 
+                str(row['type']), 
+                str(row['category']), 
+                val_new_desc
+            ))
+        return rules
+    except Exception as e:
+        print(f"Error al cargar las reglas CSV: {e}")
+        return []
+
 def categorize(df, selected_template=None):
-    #Categoriza los registros basándose en reglas y palabras clave en orden secuencial.
     print("\n--- Categorizar Registros ---")
     rules = load_rules()
     
     if not rules:
-        print("No hay reglas de categorización definidas. Crea algunas primero.")
+        print("No hay reglas definidas.")
         return df
 
-    # Extraemos las sugerencias del template si existen
-    t_source = selected_template.get('SOURCE_COL') if selected_template else None
-    t_type = selected_template.get('TYPE_COL') if selected_template else None
-    t_cat = selected_template.get('CAT_COL') if selected_template else None
+    # (Mantenemos tu lógica de selección de columnas...)
+    source_col = select_column(df, "Descripción", "Descripcion", 
+                               selected_template.get('SOURCE_COL') if selected_template else None)
+    type_col = select_column(df, "Tipo de Gasto", "Tipo", 
+                             selected_template.get('TYPE_COL') if selected_template else None)
+    category_col = select_column(df, "Categoría", "Categoria", 
+                                 selected_template.get('CAT_COL') if selected_template else None)
 
-    # Llamadas a la función de selección
-    source_col = select_column(df, "Descripción", "Descripcion", t_source)
-    
-    type_col = select_column(df, "Tipo de Gasto", "Tipo", t_type)
-    if type_col not in df.columns:
-        df[type_col] = ""
-            
-    category_col = select_column(df, "Categoría", "Categoria", t_cat)
-    if category_col not in df.columns:
-        df[category_col] = ""
-        
+    # Aseguramos que las columnas existan
+    for col in [type_col, category_col]:
+        if col not in df.columns:
+            df[col] = ""
+
     categorized_count = 0
-    df[source_col] = df[source_col].astype(str)
-    df[category_col] = df[category_col].astype(str)
-    df[type_col] = df[type_col].astype(str)
 
     def assign_category(description):
         nonlocal categorized_count
-        desc_value = description
-        cat_value = ""
-        type_value = ""
-
+        # Normalización simple y rápida de la descripción de entrada
+        desc_value = str(description) if pd.notna(description) else ""
         desc_lower = desc_value.lower()
+        
+        final_type = ""
+        final_cat = ""
 
-        # Recorre las reglas en orden
-        for keyword, type, category, new_desc in rules:
-                        
+        for keyword, t_val, c_val, new_desc in rules:
             if keyword in desc_lower:
                 categorized_count += 1
-                cat_value = category
-                type_value = type
-                if new_desc:
+                final_type = t_val
+                final_cat = c_val
+                # Solo reemplazamos si hay algo válido en new_desc
+                if new_desc is not None:
                     desc_value = new_desc
-                    desc_lower = desc_value.lower()  # actualiza el texto para reglas posteriores
+                    desc_lower = desc_value.lower()
+        
+        return final_type, final_cat, desc_value
 
-        return type_value, cat_value, desc_value
-
-    # Aplicar reglas
+    # Aplicación eficiente
     results = df[source_col].apply(assign_category)
-    results_list = results.tolist()
-    results_df = pd.DataFrame(results_list, columns=[type_col, category_col, source_col])
-    # Ensure columns are assigned in the correct order
-    df[type_col] = results_df[type_col]
-    df[category_col] = results_df[category_col]
-    df[source_col] = results_df[source_col]
+    df[[type_col, category_col, source_col]] = pd.DataFrame(results.tolist(), index=df.index)
 
+    # Limpieza estética de nombres de columnas
     df.columns = [col.replace('_', ' ').capitalize() for col in df.columns]
-    print(f"\n Proceso de categorización completado. Se categorizaron {categorized_count} coincidencias.")
+    print(f"\nProceso completado. Se categorizaron {categorized_count} coincidencias.")
     return df
 
 def apply_format(df, file_path):
