@@ -103,65 +103,6 @@ def load_rules():
         print(f"Error al cargar las reglas CSV: {e}")
         return []
 
-# def categorize(df, selected_template=None):
-#     print("\n--- Categorizar Registros ---")
-    
-#     # 1. Identificar columnas (esto DEBE pasar siempre para preparar la estructura)
-#     t_source = selected_template.get('SOURCE_COL') if selected_template else None
-#     t_type = selected_template.get('TYPE_COL') if selected_template else None
-#     t_cat = selected_template.get('CAT_COL') if selected_template else None
-
-#     source_col = select_column(df, "Descripción", "Descripcion", t_source)
-#     type_col = select_column(df, "Tipo de Gasto", "Tipo", t_type)
-#     category_col = select_column(df, "Categoría", "Categoria", t_cat)
-
-#     # Aseguramos que las columnas de destino existan
-#     if type_col not in df.columns:
-#         df[type_col] = ""
-#     if category_col not in df.columns:
-#         df[category_col] = ""
-        
-#     # Aseguramos tipos string para evitar errores de comparación
-#     df[source_col] = df[source_col].astype(str)
-#     df[category_col] = df[category_col].astype(str)
-#     df[type_col] = df[type_col].astype(str)
-
-#     # 2. Cargar y aplicar reglas (solo si existen)
-#     rules = load_rules()
-#     if not rules:
-#         print("Aviso: No hay reglas definidas en el CSV. Se saltará la categorización automática.")
-#     else:
-#         categorized_count = 0
-
-#         def assign_category(description):
-#             nonlocal categorized_count
-#             desc_value = str(description) if pd.notna(description) else ""
-#             desc_lower = desc_value.lower()
-#             cat_value, type_value = "", ""
-
-#             for keyword, t_val, c_val, new_desc in rules:
-#                 if keyword in desc_lower:
-#                     categorized_count += 1
-#                     cat_value, type_value = c_val, t_val
-#                     if new_desc:
-#                         desc_value = new_desc
-#                         desc_lower = desc_value.lower()
-#             return type_value, cat_value, desc_value
-
-#         # Aplicar reglas
-#         results = df[source_col].apply(assign_category)
-#         results_df = pd.DataFrame(results.tolist(), columns=[type_col, category_col, source_col])
-#         df[type_col] = results_df[type_col].values
-#         df[category_col] = results_df[category_col].values
-#         df[source_col] = results_df[source_col].values
-#         print(f"Proceso completado. Se categorizaron {categorized_count} coincidencias.")
-
-#     # 3. Normalización final de nombres de columnas (DEBE pasar siempre)
-#     # Esto transforma "descripcion" -> "Descripcion" y "categoria" -> "Categoria"
-#     df.columns = [col.replace('_', ' ').capitalize() for col in df.columns]
-    
-#     return df
-
 def categorize(df, selected_template=None, col_identity=(None, None, None)):
     print("\n--- Categorizar Registros ---")
     
