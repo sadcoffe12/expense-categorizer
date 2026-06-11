@@ -1,20 +1,28 @@
 ﻿keyword,type,category,new_description
-.aho,Variable,Ahorros,
-cripto,Variable,Ahorros,Cripto en Binance
-balanz,Variable,Ahorros,Acciones en Balanz
-liquidacion titulos debito,Variable,Ahorros,Compra Dolares MEP
-debito por compra de dolares,Variable,Ahorros,Compra Dolares MEP
+.aho,Ahorros,Dolares,
+nexo,Ahorros,Cripto,Liquidez en Nexo
+cripto,Ahorros,Cripto,Cripto en Binance
+balanz,Ahorros,Acciones,Acciones en Balanz
+liquidacion titulos debito,Ahorros,Dolares,Compra Dolares MEP
+debito por compra de dolares,Ahorros,Dolares,Compra Dolares MEP
 .alq,Fijo,Alquiler,Alquiler Pasco 535
 garcia jorge luis,Fijo,Alquiler,Alquiler Pasco 535
-.exp,Fijo,Alquiler,Expensas Pasco 353
-consorcio prop pasco 53,Fijo,Alquiler,Expensas Pasco 353
+.exp,Fijo,Alquiler,Expensas Pasco 535
+consorcio prop pasco 53,Fijo,Alquiler,Expensas Pasco 535
 .com,Variable,Comida,
+picadabar,Variable,Comida,PicadaBar Fiambres
+cadore,Variable,Comida,Cadore
+tommysshop,Variable,Comida,Kiosko
+Kiddo,Variable,Comida,Kiddo Hamburguesas
+starbucks,Variable,Comida,Starbucks
+Hornito santiaguenio,Variable,Comida,Hornito Santiaguenio Empanadas
+juanvaldez,Variable,Comida,Juan Valdez Cafe
 havannario,Variable,Comida,Havanna
 havanna,Variable,Comida,Havanna
 mcdonalds,Variable,Comida,McDonalds
 mc donalds,Variable,Comida,McDonalds
 merpago*milangaco,Variable,Comida,Milanga
-brozziano,Variable,Comida,Empanadas Brozziano
+brozziano,Variable,Comida,Brozziano Empanadas
 javierduarte,Variable,Comida,Medialunas
 malvon,Variable,Comida,Malvon Panaderia
 luccianos,Variable,Comida,Luccianos Heladeria
@@ -23,6 +31,7 @@ chino,Variable,Comida,Chino Tienda
 *copetincaterin,Variable,Comida,Maquina expendedora
 estancia san francis,Variable,Comida,Estancia San Francisco
 rinconnorteno,Variable,Comida,Rincón Norteño Empanadas
+Rincon norteno,Variable,Comida,Rincón Norteño Empanadas
 cadore gelato artigian,Variable,Comida,Cadore Helados
 chanchito market,Variable,Comida,Chino Tienda
 souriana,Variable,Comida,Shawarma
@@ -30,7 +39,11 @@ warrencafe,Variable,Comida,Warren Cafe
 warren,Variable,Comida,Warren Cafe
 milanga,Variable,Comida,Milanga & Co
 klavalle130,Variable,Comida,Kiosko
+Nicolo helados,Variable,Comida,Nicolo Helados
 .cre,Fijo,Credito,
+master bna,Fijo,Credito,Pago de tarjeta de credito Mastercard BNA
+visa bna,Fijo,Credito,Pago de tarjeta de credito Visa BNA
+Pago tarjeta de credito visa,Fijo,Credito,Pago de tarjeta de credito Visa Santander
 omint,Fijo,Credito,Omint Reintegros
 tarjeta de credito,Fijo,Credito,
 .del,Variable,Delivery,Pedidos Ya
@@ -44,7 +57,8 @@ manutencion,Fijo,Familia,Manutencion de Mama
 extraccion,Variable,Efectivo,Extraccion de Efectivo
 .hog,Variable,Hogar,
 temucom,Variable,Hogar,Temu
-imp.afip,Variable,Impuestos,
+Imp.afip:,Variable,Impuestos,AFIP
+Afip 5000 625 d,Variable,Impuestos,Devolucion de Percepciones AFIP
 tx internacional,Variable,Impuestos,Comision Compra de Dolar MEP
 sorpresa,Variable,Impuestos,Comision por sorpresa Santander
 servicio de cuenta,Variable,Impuestos,
@@ -53,13 +67,18 @@ ley27743,Variable,Impuestos,
 ley 25.413,Variable,Impuestos,
 sircreb,Variable,Impuestos,Ingresos Brutos SIRCREB
 .jue,Variable,Juegos,
-steam,Variable,Juegos,
+steam,Variable,Juegos,Steam
 .mer,Variable,Mercado,
+express belgrano 2160,Variable,Mercado,Carrefour Express
+debito coto,Variable,Mercado,Coto
+coto sucursal 151,Variable,Mercado,Coto
+express belgrano,Variable,Mercado,Carrefour Express
 merpago*coto,Variable,Mercado,Coto
 carrefour,Variable,Mercado,Carrefour
 estancia san franciso,Variable,Mercado,Estancia San Francisco
-.med,Variable,Medicina,
+.sal,Variable,Salud,
 .oci,Variable,Ocio,
+La paz arriba,Variable,Ocio,PPT Fest 2.0
 santacebada,Variable,Ocio,Santa Cebada Bar
 hoyts,Variable,Ocio,Cine Hoyts
 .otr,Variable,Otros,
@@ -68,13 +87,13 @@ peluqueria,Variable,Personal,Barberia
 barbero,Variable,Personal,Barberia
 barber,Variable,Personal,Barberia
 barbados,Variable,Personal,Barberia
-psico,Variable,Personal,Rosa Psicologa
 .pro,Variable,Proyecto,
 serv.digitales,Variable,Proyecto,Impuesto sobre Ingreso de Youtube
 iva rg 4240,Variable,Proyecto,IVA sobre Ingreso de Youtube
 rg 5617,Variable,Proyecto,Impuesto sobre Publicidad de Youtube
 google *ads,Variable,Proyecto,Publicidad de Youtube
 .hon,Fijo,Honorarios,
+psico,Fijo,Honorarios,Rosa Psicologa
 botolini matias,Fijo,Honorarios,Contador Matias Ariel
 juan luis castillo gar,Fijo,Honorarios,Contador Sebastian Ganancias
 .ser,Fijo,Servicios,
@@ -92,16 +111,20 @@ nflx,Fijo,Suscripciones,Netflix
 spoti,Fijo,Suscripciones,Spotify
 spotify,Fijo,Suscripciones,Spotify
 ytp,Fijo,Suscripciones,Youtube Premium
-tuenti,Fijo,Suscripciones,Tuenti Manuel
 tuenti m,Fijo,Suscripciones,Tuenti Manuel
-tuenti f,Fijo,Suscripciones,Tuenti Francis
+tuenti f,Fijo,Suscripciones,Tuenti Mama
 .tra,Variable,Transporte,
 emova,Variable,Transporte,Emova Subte
 ebanxsa,Variable,Transporte,Uber
-sube viajes,Variable,Transporte,Sube
+sube viajes,Variable,Transporte,Sube Buses
 merpago*sube,Variable,Transporte,Sube Recarga
 visa garpa subte,Variable,Transporte,Promo Visa Subte
 visa garpa buses,Variable,Transporte,Promo Visa Buses
 visa garpa transporte,Variable,Transporte,Promo Visa Transporte
 cabify,Variable,Transporte,Cabify
 .via,Variable,Viajes
+.ing,Ingreso,Proyecto
+talavera/ mercado pago /,Ingreso,,Ingreso de Mercado Pago Cuenta Propia
+transferencia recibida de talavera talavera,Ingreso,,Ingreso de BNA Cuenta Propia
+.efe,Variable,Efectivo,
+retiro de efectivo en santander,Variable,Efectivo,Retiro de Efectivo

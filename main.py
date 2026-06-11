@@ -49,6 +49,19 @@ def normalize_text(text, is_transaction=False):
     
     return text
 
+def normalize_col_name(col_name):
+    """
+    Normaliza nombre de columna para matching flexible (sin tildes, minúsculas, espacios únicos).
+    Se usa solo para comparar, no modifica el DataFrame.
+    """
+    if not isinstance(col_name, str):
+        return ""
+    normalized = col_name.lower().strip()
+    normalized = ''.join(c for c in unicodedata.normalize('NFD', normalized)
+                        if unicodedata.category(c) != 'Mn')
+    normalized = re.sub(r'\s+', ' ', normalized)
+    return normalized
+
 def select_column(df, prompt, default_name, template_suggestion=None):
     # Si el template ya trae una columna válida, la usamos sin preguntar
     if template_suggestion and template_suggestion in df.columns:
@@ -71,7 +84,40 @@ def select_column(df, prompt, default_name, template_suggestion=None):
     
     return user_input
 
+def ensure_rules_file_valid():
+    """Verifica y recrea categorization_rules.csv si no existe o está vacío."""
+    if not os.path.exists(RULES_FILE) or os.path.getsize(RULES_FILE) == 0:
+        df_empty = pd.DataFrame(columns=['keyword', 'type', 'category', 'new_description'])
+        df_empty.to_csv(RULES_FILE, index=False, encoding="utf-8")
+        print(f"ℹ️  Archivo '{RULES_FILE}' creado con columnas vacías.")
+        return True  # Archivo recreado
+    return False  # Archivo ya existía
+
+def ensure_templates_file_valid():
+    """Verifica y recrea templates.txt si no existe o está vacío."""
+    if not os.path.exists(TEMPLATES_FILE) or os.path.getsize(TEMPLATES_FILE) == 0:
+        # Crea un template de ejemplo vacío para que el usuario lo complete
+        default_template = """TEMPLATE_NAME: Mi Template
+HEADER_ROW: 1
+START_ROW: 2
+START_COL: A
+END_COL: Z
+COLS_TO_DROP: 
+ROWS_TO_DROP: 
+COLS_TO_ADD: 
+ORDERED_COLS: 
+SOURCE_COL: Descripcion
+TYPE_COL: Tipo
+CAT_COL: Categoria
+"""
+        with open(TEMPLATES_FILE, "w", encoding="utf-8") as f:
+            f.write(default_template)
+        print(f"ℹ️  Archivo '{TEMPLATES_FILE}' creado con un template de ejemplo.")
+        return True  # Archivo recreado
+    return False  # Archivo ya existía
+
 def load_rules():
+    ensure_rules_file_valid()
     if not os.path.exists(RULES_FILE):
         df_empty = pd.DataFrame(columns=['keyword', 'type', 'category', 'new_description'])
         df_empty.to_csv(RULES_FILE, index=False, encoding="utf-8")
@@ -120,6 +166,11 @@ def categorize(df, selected_template=None, col_identity=(None, None, None)):
     # Aseguramos existencia de columnas de destino
     if typ not in df.columns: df[typ] = ""
     if cat not in df.columns: df[cat] = ""
+    
+    # Guardar descripción original antes de cualquier reemplazo
+    src_original = f"{src} Original"
+    if src_original not in df.columns:
+        df[src_original] = df[src].copy()
         
     df[src] = df[src].astype(str)
     df[cat] = df[cat].astype(str)
@@ -153,8 +204,32 @@ def categorize(df, selected_template=None, col_identity=(None, None, None)):
     # Normalización final de nombres de columnas
     df.columns = [col.replace('_', ' ').capitalize() for col in df.columns]
     
+    # Si tenemos el template, aplicar el reordenamiento final respetando ORDERED_COLS
+    if selected_template and 'ORDERED_COLS' in selected_template:
+        raw_ordered_cols = selected_template['ORDERED_COLS'].replace("'", "").replace('"', "")
+        ordered_cols = [col.strip() for col in raw_ordered_cols.split(',')]
+        
+        # Crear mapeo flexible de nombres normalizados
+        col_map = {}
+        for df_col in df.columns:
+            normalized_df_col = normalize_col_name(df_col)
+            col_map[normalized_df_col] = df_col
+        
+        # Buscar columnas que existen en el DataFrame
+        final_cols = []
+        for template_col in ordered_cols:
+            normalized_template_col = normalize_col_name(template_col)
+            if normalized_template_col in col_map:
+                final_cols.append(col_map[normalized_template_col])
+        
+        # Reordenar según el template
+        if final_cols:
+            df = df[final_cols]
+    
     # Retornamos el DF y los nombres que resultaron de la capitalización
-    return df, src.replace('_', ' ').capitalize(), cat.replace('_', ' ').capitalize()
+    src_final = src.replace('_', ' ').capitalize()
+    cat_final = cat.replace('_', ' ').capitalize()
+    return df, src_final, cat_final
 
 def get_similarity(a, b):
     """Retorna el ratio de similitud entre dos strings."""
@@ -300,7 +375,10 @@ def update_history(new_list):
     ]
     df_new = pd.DataFrame(new_data)
     
-    if os.path.exists(HISTORY_FILE):
+    # Verificar si el archivo existe y no está vacío
+    file_is_empty = os.path.exists(HISTORY_FILE) and os.path.getsize(HISTORY_FILE) == 0
+    
+    if os.path.exists(HISTORY_FILE) and not file_is_empty:
         df_old = pd.read_csv(HISTORY_FILE)
         # Asegurar que la columna 'date_added' existe en df_old (por compatibilidad)
         if 'date_added' not in df_old.columns:
@@ -384,8 +462,8 @@ def analyze_patterns_by_period(current_unassigned):
     Retorna: dict con patrones y su contexto temporal
     """
     
-    if not os.path.exists(HISTORY_FILE):
-        # Si no hay historial, solo analizar esta sesión
+    if not os.path.exists(HISTORY_FILE) or os.path.getsize(HISTORY_FILE) == 0:
+        # Si no hay historial o está vacío, solo analizar esta sesión
         new_unassigned = [{"cleaned": normalize_text(x, is_transaction=True)} for x in current_unassigned]
         df_new = pd.DataFrame(new_unassigned)
         counts = df_new['cleaned'].value_counts()
@@ -452,8 +530,10 @@ def apply_format(df, file_path):
 
     print("--- Aplicación de un template de formato de limpieza ---")
     
+    ensure_templates_file_valid()
+    
     if not os.path.exists(TEMPLATES_FILE):
-        print("No se encontraron templates de formato. Por favor, crea uno primero.")
+        print("No se encontraron templates de formato.")
         return df, None
 
     # --- (La sección de lectura y selección de templates no cambia) ---
@@ -462,7 +542,7 @@ def apply_format(df, file_path):
         with open(TEMPLATES_FILE, "r") as f:
             content = f.read().strip()
             if not content:
-                print("El archivo de templates está vacío.")
+                print("El archivo de templates está vacío. Se ha creado con un template de ejemplo.")
                 return df, None, None
             
             lines = content.split("---")
@@ -580,20 +660,30 @@ def apply_format(df, file_path):
 
         # 6. Reordenamiento Final Dinámico
         if 'ORDERED_COLS' in selected_template and selected_template['ORDERED_COLS']:
-            # Como ya normalizamos al leer el archivo, solo limpiamos comillas si existieran
+            # Leer las columnas deseadas del template (con tildes/mayúsculas originales)
             raw_ordered_cols = selected_template['ORDERED_COLS'].replace("'", "").replace('"', "")
             ordered_cols = [col.strip() for col in raw_ordered_cols.split(',')]
             
-            # Caso especial: Si el Excel usa "concepto" pero tu orden pide "descripcion"
-            # (Ambos ya están en minúsculas por la normalización previa)
-            if 'concepto' in df_new.columns and 'descripcion' in ordered_cols:
-                df_new.rename(columns={'concepto': 'descripcion'}, inplace=True)
+            # Crear un mapeo flexible: normalized_name -> original_col_in_df
+            col_map = {}
+            for df_col in df_new.columns:
+                normalized_df_col = normalize_col_name(df_col)
+                col_map[normalized_df_col] = df_col
             
-            # Ahora el cruce de datos es exacto: minúscula vs minúscula
-            existing_cols = [col for col in ordered_cols if col in df_new.columns]
+            # Buscar qué columnas del template existen en el DataFrame (matching flexible)
+            existing_cols = []
+            for template_col in ordered_cols:
+                normalized_template_col = normalize_col_name(template_col)
+                if normalized_template_col in col_map:
+                    # Usa el nombre original del DataFrame (con tildes/mayúsculas como en los datos)
+                    existing_cols.append(col_map[normalized_template_col])
             
-            df_new = df_new[existing_cols]
-            print(f"Columnas reordenadas exitosamente.")
+            # Reordenar el DataFrame con las columnas encontradas
+            if existing_cols:
+                df_new = df_new[existing_cols]
+                print(f"Columnas reordenadas exitosamente.")
+            else:
+                print(f"Aviso: No se encontraron coincidencias para reordenar columnas.")
 
         # Extraemos los nombres exactos definidos en el template.txt
         # Si no existen, usamos valores por defecto seguros
@@ -610,7 +700,27 @@ def apply_format(df, file_path):
         print(f"Ocurrió un error al aplicar el formato: {e}")
         return df, None, (None, None, None)    
     
+def clean_descriptions(df):
+    """Limpia espacios duplicados y extras en la columna Descripción."""
+    # Buscar la columna de descripción (con o sin mayúsculas)
+    desc_col = None
+    for col in df.columns:
+        if col.lower() in ['descripcion', 'description']:
+            desc_col = col
+            break
+    
+    if desc_col:
+        # Limpieza: quitar espacios al inicio/fin y reducir espacios duplicados internos
+        df[desc_col] = df[desc_col].astype(str).str.strip()  # Espacios al inicio y fin
+        df[desc_col] = df[desc_col].str.replace(r'\s+', ' ', regex=True)  # Espacios duplicados internos
+    
+    return df
+    
 def main():
+    # Asegurar que los archivos de configuración existen y son válidos
+    ensure_rules_file_valid()
+    ensure_templates_file_valid()
+    
     df = None
     file_path = ""
     while True:
@@ -651,6 +761,8 @@ def main():
 
         elif choice == 'S':
             try:
+                # Limpiar espacios en la columna Descripción antes de guardar
+                df = clean_descriptions(df)
                 new_file_path = os.path.splitext(file_path)[0] + "_modificado.xlsx"
                 df.to_excel(new_file_path, index=False)
                 print(f"\nArchivo guardado exitosamente como '{new_file_path}'!")
