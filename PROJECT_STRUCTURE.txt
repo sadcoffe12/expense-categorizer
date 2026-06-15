@@ -1,0 +1,205 @@
+📊 EXPENSE CATEGORIZER v2.0 - PROJECT STRUCTURE
+================================================
+
+ROOT
+├── backend/                                    # FastAPI backend
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   └── setup.py                       # Setup endpoints (6 routes)
+│   │   ├── utils/
+│   │   │   ├── __init__.py
+│   │   │   ├── file_handler.py               # CSV/XLSX/SQL parsing
+│   │   │   └── column_mapper.py              # Column mapping & validation
+│   │   ├── __init__.py
+│   │   ├── main.py                           # FastAPI app + CORS
+│   │   ├── database.py                       # SQLAlchemy setup
+│   │   ├── models.py                         # 8 ORM models
+│   │   ├── schemas.py                        # Pydantic validators
+│   │   └── config.py                         # config.json manager
+│   ├── __init__.py
+│   ├── run.py                                # Entry point (python run.py)
+│   └── requirements.txt                      # Python dependencies
+│
+├── frontend/                                   # React + TypeScript frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── FileUpload.tsx               # Drag-drop upload
+│   │   │   └── ColumnMapper.tsx             # Column mapping UI
+│   │   ├── pages/
+│   │   │   └── SetupPage.tsx                # 5-step setup wizard
+│   │   ├── services/
+│   │   │   └── api.ts                       # Axios HTTP client
+│   │   ├── types/
+│   │   │   └── index.ts                     # TypeScript interfaces
+│   │   ├── hooks/                           # (Empty, for future use)
+│   │   ├── App.tsx                          # Main app component
+│   │   ├── main.tsx                         # React entry point
+│   │   └── index.css                        # Global styles
+│   ├── public/                              # (Optional static files)
+│   ├── package.json                         # Node dependencies
+│   ├── vite.config.ts                       # Vite config + proxy
+│   ├── tsconfig.json                        # TypeScript config
+│   ├── tsconfig.node.json                   # TS config for vite
+│   └── index.html                           # HTML entry point
+│
+├── data/                                      # Database directory (created)
+│   ├── .gitkeep
+│   └── expense.db                           # SQLite DB (generated after setup)
+│
+├── .git/                                      # Git repository
+├── .gitignore                                # Excludes: venv/, node_modules/, *.db, config.json
+├── .vscode/                                   # VS Code settings
+├── README.md                                 # Complete documentation
+├── start.sh                                  # Combined start script
+├── PROJECT_STRUCTURE.txt                    # This file
+├── config.json                              # Generated after setup
+│
+└── Data Files (existing)
+    ├── librodecuentas_db.csv               # Test data (~200 transactions)
+    ├── categorization_rules.csv
+    ├── categorization_rules.txt
+    ├── main.py                             # Original categorizer (legacy)
+    ├── requirements.txt                    # Original requirements (legacy)
+    ├── templates.txt
+    ├── uncategorized_history.csv
+    └── venv/                               # Python virtual environment
+
+================================================================
+DATABASE SCHEMA (8 Tables)
+================================================================
+
+categories
+  - id (INT, PK)
+  - name (VARCHAR, UNIQUE)
+  - type (VARCHAR: Fixed/Variable/Ingreso)
+  - color_hex (VARCHAR)
+  - icon (VARCHAR)
+  - created_at (DATETIME)
+
+expenses
+  - id (INT, PK)
+  - date (DATE)
+  - description (TEXT)
+  - description_cleaned (TEXT)
+  - amount (FLOAT)
+  - category_id (INT, FK)
+  - type (VARCHAR)
+  - location (VARCHAR)
+  - notes (TEXT)
+  - source (VARCHAR: manual/import/api)
+  - created_at (DATETIME)
+
+rules
+  - id (INT, PK)
+  - keyword (VARCHAR)
+  - category_id (INT, FK)
+  - confidence (FLOAT)
+  - active (BOOLEAN)
+  - created_at (DATETIME)
+
+budgets
+  - id (INT, PK)
+  - category_id (INT, FK)
+  - amount (FLOAT)
+  - period (VARCHAR: month/year)
+  - start_date (DATE)
+  - end_date (DATE)
+  - created_at (DATETIME)
+
+alerts
+  - id (INT, PK)
+  - expense_id (INT, FK)
+  - alert_type (VARCHAR: budget_exceeded/anomaly)
+  - message (VARCHAR)
+  - acknowledged (BOOLEAN)
+  - created_at (DATETIME)
+
+categorization_history
+  - id (INT, PK)
+  - expense_id (INT, FK)
+  - original_text (VARCHAR)
+  - cleaned_text (VARCHAR)
+  - suggested_category_id (INT)
+  - user_action (VARCHAR: confirmed/rejected/skipped)
+  - created_at (DATETIME)
+
+expense_tags
+  - id (INT, PK)
+  - expense_id (INT, FK)
+  - tag_name (VARCHAR)
+  - created_at (DATETIME)
+
+dashboard_config
+  - id (INT, PK)
+  - config_name (VARCHAR)
+  - filters (JSON)
+  - layout_preferences (JSON)
+  - created_at (DATETIME)
+
+================================================================
+API ENDPOINTS (Implemented)
+================================================================
+
+Setup (Setup wizard flow)
+  POST   /api/setup/validate-sql         - Validate SQL file
+  POST   /api/setup/parse-file           - Parse CSV/XLSX headers & preview
+  POST   /api/setup/create-database      - Create DB from CSV/XLSX + mapping
+  GET    /api/setup/load-database        - Load existing database config
+
+Config
+  GET    /api/config/status              - Get configuration status
+  GET    /health                          - Health check
+  GET    /                                - API metadata
+
+================================================================
+QUICK START
+================================================================
+
+1. Terminal 1 - Backend:
+   cd /home/aeon95/Downloads/Expense\ Categorizer/expense-categorizer/backend
+   python run.py
+   → Backend runs on http://localhost:8000
+
+2. Terminal 2 - Frontend:
+   cd /home/aeon95/Downloads/Expense\ Categorizer/expense-categorizer/frontend
+   npm install      # Only first time
+   npm run dev
+   → Frontend runs on http://localhost:5173
+
+3. Open browser: http://localhost:5173
+   → Setup wizard appears, import data
+
+Alternative: One command
+   ./start.sh        # Starts both backend and frontend
+
+================================================================
+FILE COUNT SUMMARY
+================================================================
+
+✅ Backend Python files: 9
+   - main.py, database.py, models.py, schemas.py, config.py
+   - setup.py (6 endpoints)
+   - file_handler.py, column_mapper.py
+   - + 4 __init__.py files
+
+✅ Frontend TypeScript/React files: 9
+   - App.tsx, main.tsx, index.css
+   - FileUpload.tsx, ColumnMapper.tsx
+   - SetupPage.tsx
+   - api.ts, index.ts
+   - + 1 config file (index.html)
+
+✅ Configuration files: 7
+   - package.json, vite.config.ts, tsconfig.json, tsconfig.node.json, index.html
+   - requirements.txt, .gitignore
+
+✅ Documentation: 2
+   - README.md, PROJECT_STRUCTURE.txt
+
+✅ Utilities: 1
+   - start.sh (combined launcher)
+
+TOTAL: ~32 FILES CREATED & CONFIGURED
+
+================================================================
