@@ -21,6 +21,7 @@ import socket
 import atexit
 import signal
 import shutil
+import glob
 from pathlib import Path
 
 # Colores para terminal
@@ -87,12 +88,14 @@ signal.signal(signal.SIGINT, signal_handler)
 
 def find_npm():
     """Busca npm en el sistema de forma confiable"""
-    # Primero intenta con shutil (más confiable)
+    
+    # 1. Primero intenta con shutil (más confiable)
     npm_path = shutil.which("npm")
     if npm_path:
+        print_info(f"npm encontrado (shutil): {npm_path}")
         return npm_path
     
-    # Intenta con comandos del sistema
+    # 2. Intenta con comandos del sistema
     try:
         if sys.platform == "win32":
             result = subprocess.run(
@@ -105,7 +108,56 @@ def find_npm():
                 shell=True, capture_output=True, text=True, timeout=2
             )
         if result.stdout.strip():
-            return result.stdout.strip().split('\n')[0]
+            path = result.stdout.strip().split('\n')[0]
+            if os.path.exists(path):
+                print_info(f"npm encontrado (which): {path}")
+                return path
+    except:
+        pass
+    
+    # 3. Busca en rutas comunes (especialmente útil para NVM, Homebrew, etc)
+    common_paths = [
+        # macOS Homebrew (Intel)
+        "/usr/local/bin/npm",
+        # macOS Homebrew (Apple Silicon)
+        "/opt/homebrew/bin/npm",
+        # Linux estándar
+        "/usr/bin/npm",
+        "/bin/npm",
+        # NVM - primero expandir ~ a la ruta del usuario
+        os.path.expanduser("~/.nvm/versions/node/*/bin/npm"),
+        # Local node_modules (último recurso)
+        os.path.expanduser("./node_modules/.bin/npm"),
+    ]
+    
+    for path_pattern in common_paths:
+        try:
+            if "*" in path_pattern:
+                # Expandir glob patterns
+                matches = glob.glob(path_pattern)
+                for match in sorted(matches, reverse=True):  # Usar última versión de Node
+                    if os.path.exists(match) and os.path.isfile(match):
+                        print_info(f"npm encontrado (glob): {match}")
+                        return match
+            else:
+                # Ruta exacta
+                if os.path.exists(path_pattern) and os.path.isfile(path_pattern):
+                    print_info(f"npm encontrado (path): {path_pattern}")
+                    return path_pattern
+        except Exception as e:
+            # Ignorar errores en la búsqueda
+            continue
+    
+    # 4. Último intento: si npm no está en PATH pero existe Node.js
+    # Retornar "npm" y dejar que el shell lo resuelva
+    try:
+        result = subprocess.run(
+            "npm --version",
+            shell=True, capture_output=True, text=True, timeout=2
+        )
+        if result.returncode == 0:
+            print_info("npm encontrado a través del shell")
+            return "npm"
     except:
         pass
     
@@ -200,10 +252,17 @@ def setup_frontend_environment(project_root):
     npm = find_npm()
     
     if not npm:
-        print_error("npm no encontrado. Por favor instala Node.js desde https://nodejs.org")
+        print_error("npm no encontrado")
+        print_warning("Rutas buscadas:")
+        print_warning("  - /usr/local/bin/npm")
+        print_warning("  - /opt/homebrew/bin/npm")
+        print_warning("  - /usr/bin/npm")
+        print_warning("  - ~/.nvm/versions/node/*/bin/npm")
+        print_error("Por favor instala Node.js desde https://nodejs.org")
+        print_error("O si usas NVM: nvm install node && nvm use node")
         return False
     
-    print_success(f"npm encontrado: {npm}")
+    print_success(f"npm listo")
     
     # Verificar si node_modules existe
     node_modules = frontend_dir / "node_modules"
@@ -289,41 +348,100 @@ def start_frontend(project_root):
         return False
     
     try:
+        # Preparar el comando
+        npm_dev_cmd = f'"{npm}" run dev'
+        
         if sys.platform == "win32":
-            cmd = f'"{npm}" run dev'
             process = subprocess.Popen(
-                cmd,
+                npm_dev_cmd,
                 cwd=str(frontend_dir),
                 shell=True,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             )
         else:
-            # Unix: bash -i para cargar perfiles (NVM, etc)
-            cmd = f'"{npm}" run dev'
+            # Unix/Linux/Mac: usar bash -i para cargar NVM y otros profiles
+            # -i = interactive, carga ~/.bashrc, ~/.zshrc, etc
             process = subprocess.Popen(
-                cmd,
+                f'bash -i -c "{npm_dev_cmd}"',
                 cwd=str(frontend_dir),
                 shell=True,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
+                bufsize=1,
                 preexec_fn=os.setsid
             )
         
         RUNNING_PROCESSES.append(process)
         
         # Esperar a que el puerto esté disponible
-        print_info("Esperando Frontend (max 25s)...")
-        for attempt in range(25):
-            time.sleep(1)
-            if check_port_in_use(5173):
-                print_success(f"Frontend iniciado (PID: {process.pid})")
-                print_info("  🌐 http://localhost:5173")
-                return True
+        print_info("Esperando Frontend (max 30s)...")
         
-        print_error("Frontend no respondió después de 25 segundos")
+        port_ready = False
+        start_time = time.time()
+        
+        for attempt in range(30):
+            time.sleep(1)
+            
+            # Revisar si el proceso terminó con error
+            poll_result = process.poll()
+            if poll_result is not None:
+                # El proceso terminó
+                print_error(f"Proceso Vite terminó con código: {poll_result}")
+                # Leer el output del error
+                try:
+                    output = process.stdout.read()
+                    if output:
+                        print_error("Output del proceso:")
+                        print(output[:500])
+                except:
+                    pass
+                return False
+            
+            # Verificar si el puerto está listo
+            if check_port_in_use(5173):
+                elapsed = time.time() - start_time
+                print_success(f"Frontend iniciado (PID: {process.pid}, {elapsed:.1f}s)")
+                print_info("  🌐 http://localhost:5173")
+                port_ready = True
+                break
+            
+            # Mostrar progreso cada 5 segundos
+            if (attempt + 1) % 5 == 0:
+                elapsed = time.time() - start_time
+                print_info(f"  Esperando... {elapsed:.0f}s")
+        
+        if port_ready:
+            return True
+        
+        # Si llegamos aquí, el puerto no se abrió
+        print_error("Frontend no respondió después de 30 segundos")
+        
+        # Intentar capturar el output para debugging
+        if not process.poll():
+            print_warning("\nIntentando capturar salida del proceso...")
+            try:
+                # Non-blocking read del stdout
+                if sys.platform != "win32":
+                    import fcntl
+                    import os as os_module
+                    
+                    flags = fcntl.fcntl(process.stdout, fcntl.F_GETFL)
+                    fcntl.fcntl(process.stdout, fcntl.F_SETFL, flags | os_module.O_NONBLOCK)
+                    
+                    try:
+                        output = process.stdout.read(1000)
+                        if output:
+                            print_error("Output del proceso:")
+                            print(output)
+                    except BlockingIOError:
+                        print_warning("No hay output disponible")
+            except:
+                print_warning("No se pudo leer output (Windows/diferente SO)")
+        
         return False
         
     except Exception as e:
