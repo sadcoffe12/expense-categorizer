@@ -1,20 +1,58 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 *.egg-info/
+*.egg
+dist/
+build/
+.Python
+
+# Virtual environments
 venv/
 env/
 .venv
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node
 node_modules/
-dist/
-build/
+npm-debug.log
+yarn-error.log
+
+# Databases & Logs
 *.db
-config.json
+*.log
+logs/
+
+# Environment
 .env
 .env.local
-logs/
-data/
-*.log
+.env.*.local
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Development
+data/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Data files - Ignore all but keep tracked rules
 *.csv
+!categorization_rules.csv
 *.xlsx
+*.xls

@@ -1,0 +1,15 @@
+{
+  "database_path": "data/expense.db",
+  "source_file": "Book1.csv",
+  "column_mapping": {
+    "fecha": "Fecha",
+    "concepto": "Concepto",
+    "monto": "Monto",
+    "categoria": "Categoria",
+    "tipo": "Tipo"
+  },
+  "records_count": 2599,
+  "categories_count": 29,
+  "created_at": "2026-06-20T14:18:59.449553",
+  "last_modified": "2026-06-20T14:18:59.449561"
+}

@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
-Script para iniciar todos los servicios de Expense Categorizer
-Inicia backend (FastAPI) y frontend (Vite)
+🚀 Expense Categorizer - One-Click Starter
+Inicializa dependencias e inicia todos los servicios (Backend + Frontend)
+
+Características:
+- Verifica e instala dependencias automáticamente
+- Crea entorno virtual de Python si no existe
+- Instala paquetes de npm y Python
+- Inicia Backend (FastAPI) en puerto 8000
+- Inicia Frontend (Vite) en puerto 5173
+- Manejo multiplataforma (Windows/Linux/Mac)
+- Limpieza automática de procesos con Ctrl+C
 """
 
 import subprocess
@@ -9,7 +18,9 @@ import sys
 import os
 import time
 import socket
-import glob
+import atexit
+import signal
+import shutil
 from pathlib import Path
 
 # Colores para terminal
@@ -20,6 +31,9 @@ class Colors:
     BLUE = '\033[94m'
     RESET = '\033[0m'
     BOLD = '\033[1m'
+
+# Variables globales para cleanup
+RUNNING_PROCESSES = []
 
 def print_header(message):
     """Imprime encabezado"""
@@ -43,6 +57,80 @@ def print_info(message):
     """Imprime mensaje de información"""
     print(f"{Colors.BLUE}ℹ️  {message}{Colors.RESET}")
 
+def cleanup_processes():
+    """Limpia todos los procesos hijo en el exit"""
+    global RUNNING_PROCESSES
+    if RUNNING_PROCESSES:
+        print_info("\nDeteniendo procesos...")
+        for proc in RUNNING_PROCESSES:
+            try:
+                if proc.poll() is None:  # Si aún está corriendo
+                    if sys.platform == "win32":
+                        proc.terminate()
+                    else:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                    time.sleep(0.5)
+                    if proc.poll() is None:
+                        proc.kill()
+            except:
+                pass
+
+def signal_handler(sig, frame):
+    """Manejador para Ctrl+C"""
+    cleanup_processes()
+    print_warning("\n\n¡Servicios detenidos!")
+    sys.exit(0)
+
+# Registrar cleanup handlers
+atexit.register(cleanup_processes)
+signal.signal(signal.SIGINT, signal_handler)
+
+def find_npm():
+    """Busca npm en el sistema de forma confiable"""
+    # Primero intenta con shutil (más confiable)
+    npm_path = shutil.which("npm")
+    if npm_path:
+        return npm_path
+    
+    # Intenta con comandos del sistema
+    try:
+        if sys.platform == "win32":
+            result = subprocess.run(
+                "where npm",
+                shell=True, capture_output=True, text=True, timeout=2
+            )
+        else:
+            result = subprocess.run(
+                "which npm",
+                shell=True, capture_output=True, text=True, timeout=2
+            )
+        if result.stdout.strip():
+            return result.stdout.strip().split('\n')[0]
+    except:
+        pass
+    
+    return None
+
+def run_command(cmd, cwd=None, description=""):
+    """Ejecuta un comando y retorna el resultado"""
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=cwd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        if result.returncode == 0:
+            return True, result.stdout
+        else:
+            return False, result.stderr or result.stdout
+    except subprocess.TimeoutExpired:
+        return False, f"Timeout (>120s) ejecutando: {description}"
+    except Exception as e:
+        return False, str(e)
+
 def check_port_in_use(port):
     """Verifica si un puerto está en uso"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -52,314 +140,255 @@ def check_port_in_use(port):
     finally:
         sock.close()
 
-def find_npm():
-    """Busca npm en el sistema"""
-    import shutil
+def setup_python_environment(project_root):
+    """Verifica y configura el entorno virtual de Python"""
+    print_info("Verificando entorno Python...")
     
-    # Primero intenta con which/where
-    try:
-        if sys.platform == "win32":
-            result = subprocess.run(
-                "where npm",
-                shell=True, capture_output=True, text=True
+    venv_path = project_root / "venv"
+    backend_dir = project_root / "backend"
+    
+    # Verificar si venv existe
+    if not venv_path.exists():
+        print_warning("Entorno virtual no encontrado, creando...")
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "venv", str(venv_path)],
+                check=True,
+                capture_output=True
             )
-        else:
-            result = subprocess.run(
-                "which npm",
-                shell=True, capture_output=True, text=True
-            )
-        if result.stdout.strip():
-            return result.stdout.strip().split('\n')[0]
-    except:
-        pass
-    
-    # Intenta con shutil
-    npm_path = shutil.which("npm")
-    if npm_path:
-        return npm_path
-    
-    # Busca en rutas comunes
-    common_paths = [
-        "/usr/local/bin/npm",
-        "/usr/bin/npm",
-        f"{os.path.expanduser('~')}/.nvm/versions/node/*/bin/npm",
-        f"{os.path.expanduser('~')}/node_modules/.bin/npm",
-    ]
-    
-    for path in common_paths:
-        if "*" in path:
-            matches = glob.glob(path)
-            for match in matches:
-                if os.path.exists(match):
-                    return match
-        elif os.path.exists(path):
-            return path
-    
-    return None
-
-def get_process_pid_on_port(port):
-    """Obtiene PID del proceso en un puerto (Linux/Mac)"""
-    try:
-        if sys.platform == "win32":
-            result = subprocess.run(
-                f'netstat -ano | findstr :{port}',
-                shell=True, capture_output=True, text=True
-            )
-            if result.stdout:
-                parts = result.stdout.split()
-                if parts:
-                    return parts[-1]
-        else:
-            result = subprocess.run(
-                f'lsof -i :{port} | grep LISTEN',
-                shell=True, capture_output=True, text=True
-            )
-            if result.stdout:
-                parts = result.stdout.split()
-                if len(parts) > 1:
-                    return parts[1]
-    except:
-        pass
-    return None
-
-def kill_process_on_port(port, port_name):
-    """Mata el proceso en un puerto"""
-    try:
-        pid = get_process_pid_on_port(port)
-        if pid:
-            print_info(f"Encontrado proceso en puerto {port} con PID {pid}")
-            try:
-                if sys.platform == "win32":
-                    subprocess.run(f'taskkill /PID {pid} /F', shell=True, capture_output=True)
-                else:
-                    subprocess.run(f'kill -9 {pid}', shell=True, capture_output=True)
-                time.sleep(1)
-                
-                # Verificar que fue terminado
-                if check_port_in_use(port):
-                    print_warning(f"Puerto {port} aún en uso, intentando nuevamente...")
-                    time.sleep(1)
-                    subprocess.run(f'kill -9 {pid}', shell=True, capture_output=True)
-                    time.sleep(2)
-                
-                if check_port_in_use(port):
-                    print_error(f"No se pudo liberar puerto {port}. Intenta manualmente: kill -9 {pid}")
-                    return False
-                else:
-                    print_success(f"Proceso en puerto {port} ({port_name}) terminado")
-                    return True
-            except Exception as e:
-                print_error(f"Error al matar proceso: {str(e)}")
-                return False
-        else:
-            print_warning(f"No se encontró proceso en puerto {port}")
+            print_success("Entorno virtual creado")
+        except Exception as e:
+            print_error(f"Error creando venv: {str(e)}")
             return False
-    except Exception as e:
-        print_error(f"Error checando puerto {port}: {str(e)}")
-        return False
-
-def ask_yes_no(question):
-    """Pide confirmación al usuario"""
-    while True:
-        response = input(f"{Colors.YELLOW}{question} (s/n): {Colors.RESET}").lower().strip()
-        if response in ['s', 'si', 'yes', 'y']:
-            return True
-        elif response in ['n', 'no']:
-            return False
-        else:
-            print_warning("Por favor ingresa 's' o 'n'")
-
-def check_services_running():
-    """Verifica qué servicios ya están corriendo"""
-    backend_running = check_port_in_use(8000)
-    frontend_running = check_port_in_use(5173)
+    else:
+        print_success("Entorno virtual encontrado")
     
-    return {
-        'backend': backend_running,
-        'frontend': frontend_running
-    }
-
-def start_backend():
-    """Inicia el backend"""
-    print_info("Iniciando backend (FastAPI)...")
-    backend_dir = Path(__file__).parent / "backend"
+    # Determinar pip executable
+    if sys.platform == "win32":
+        pip_exe = venv_path / "Scripts" / "pip.exe"
+    else:
+        pip_exe = venv_path / "bin" / "pip"
     
-    if not backend_dir.exists():
-        print_error(f"Directorio backend no encontrado: {backend_dir}")
+    if not pip_exe.exists():
+        print_error(f"pip no encontrado en {pip_exe}")
         return False
     
-    try:
-        # Usar Popen para que el proceso se ejecute en paralelo
-        process = subprocess.Popen(
-            ["python", "run.py"],
-            cwd=str(backend_dir),
-            stdout=subprocess.DEVNULL,  # Ignorar stdout
-            stderr=subprocess.DEVNULL,  # Ignorar stderr (warnings no son errores)
-            text=True
+    # Instalar dependencias del backend
+    print_info("Instalando dependencias de Python...")
+    requirements_file = backend_dir / "requirements.txt"
+    
+    if requirements_file.exists():
+        success, output = run_command(
+            f'"{pip_exe}" install -r "{requirements_file}"',
+            description="pip install"
         )
-        
-        # Esperar a que se inicie y verificar que el puerto responde
-        print_info("Esperando que el backend esté listo...")
-        max_attempts = 15
-        for attempt in range(max_attempts):
-            time.sleep(1)
-            if check_port_in_use(8000):
-                print_success(f"Backend iniciado exitosamente (PID: {process.pid})")
-                print_info("Backend disponible en: http://localhost:8000")
-                print_info("API Docs en: http://localhost:8000/docs")
-                return True
-        
-        # Si llegamos aquí, el puerto no se abrió después de esperar
-        print_error("Backend no respondió en el puerto 8000 después de 15 segundos")
-        return False
-        
-    except Exception as e:
-        print_error(f"Error iniciando backend: {str(e)}")
-        return False
-
-def start_frontend():
-    """Inicia el frontend"""
-    print_info("Iniciando frontend (Vite)...")
-    frontend_dir = Path(__file__).parent / "frontend"
+        if success:
+            print_success("Dependencias Python instaladas")
+        else:
+            print_error(f"Error instalando dependencias: {output[:200]}")
+            return False
+    else:
+        print_warning(f"requirements.txt no encontrado en {requirements_file}")
     
-    if not frontend_dir.exists():
-        print_error(f"Directorio frontend no encontrado: {frontend_dir}")
+    return True
+
+def setup_frontend_environment(project_root):
+    """Verifica e instala dependencias del frontend"""
+    print_info("Verificando entorno Node.js...")
+    
+    frontend_dir = project_root / "frontend"
+    npm = find_npm()
+    
+    if not npm:
+        print_error("npm no encontrado. Por favor instala Node.js desde https://nodejs.org")
         return False
+    
+    print_success(f"npm encontrado: {npm}")
+    
+    # Verificar si node_modules existe
+    node_modules = frontend_dir / "node_modules"
+    if not node_modules.exists():
+        print_warning("node_modules no encontrado, instalando dependencias...")
+        success, output = run_command(
+            f'"{npm}" install',
+            cwd=str(frontend_dir),
+            description="npm install"
+        )
+        if success:
+            print_success("Dependencias Node.js instaladas")
+        else:
+            print_error(f"Error instalando npm packages: {output[:200]}")
+            return False
+    else:
+        print_success("node_modules encontrado")
+    
+    return True
+
+def start_backend(project_root):
+    """Inicia el backend"""
+    print_info("Iniciando Backend (FastAPI)...")
+    backend_dir = project_root / "backend"
+    
+    # Preparar comando para ejecutar con el venv
+    if sys.platform == "win32":
+        python_exe = project_root / "venv" / "Scripts" / "python.exe"
+        cmd = f'"{python_exe}" run_backend.py'
+    else:
+        python_exe = project_root / "venv" / "bin" / "python"
+        cmd = f'"{python_exe}" run_backend.py'
     
     try:
-        # Crear un ambiente que incluya PATH actual
-        env = os.environ.copy()
-        
-        # Para Windows
         if sys.platform == "win32":
             process = subprocess.Popen(
-                "npm run dev",
+                cmd,
+                cwd=str(backend_dir),
                 shell=True,
-                cwd=str(frontend_dir),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
-                env=env
+                text=True
             )
         else:
-            # Para Unix/Linux/Mac, usar bash con login para que cargue NVM
-            # Primero, obtener el comando que usa la shell actual
+            # Unix: usar preexec_fn para grupo de procesos
             process = subprocess.Popen(
-                'bash -i -c "npm run dev"',
+                cmd,
+                cwd=str(backend_dir),
                 shell=True,
-                cwd=str(frontend_dir),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                env=env,
                 preexec_fn=os.setsid
             )
         
-        # Esperar a que se inicie y verificar que el puerto responde
-        print_info("Esperando que el frontend esté listo...")
-        max_attempts = 20
-        for attempt in range(max_attempts):
+        RUNNING_PROCESSES.append(process)
+        
+        # Esperar a que el puerto esté disponible
+        print_info("Esperando Backend (max 20s)...")
+        for attempt in range(20):
             time.sleep(1)
-            if check_port_in_use(5173):
-                print_success(f"Frontend iniciado exitosamente (PID: {process.pid})")
-                print_info("Frontend disponible en: http://localhost:5173")
+            if check_port_in_use(8000):
+                print_success(f"Backend iniciado (PID: {process.pid})")
+                print_info("  📍 http://localhost:8000")
+                print_info("  📖 Docs: http://localhost:8000/docs")
                 return True
         
-        # Si llegamos aquí, el puerto no se abrió después de esperar
-        # Intentar obtener el error del proceso
-        if process.poll() is not None:
-            # El proceso terminó, mostrar error
-            stdout, stderr = process.communicate()
-            error_msg = (stderr if stderr else stdout)[:500]
-            print_error(f"Frontend falló al iniciar: {error_msg}")
-        else:
-            # El proceso sigue corriendo pero no abrió el puerto
-            print_error("Frontend no respondió en el puerto 5173 después de 20 segundos")
-            print_warning("El proceso sigue corriendo, puede estar en error")
-            # Intentar leer un poco de stderr sin bloquear
-            try:
-                import select
-                if select.select([process.stderr], [], [], 0)[0]:
-                    error_sample = process.stderr.read(300)
-                    if error_sample:
-                        print_error(f"Error capturado: {error_sample}")
-            except:
-                pass
-        
+        print_error("Backend no respondió después de 20 segundos")
         return False
         
     except Exception as e:
-        print_error(f"Error iniciando frontend: {str(e)}")
+        print_error(f"Error iniciando Backend: {str(e)}")
+        return False
+
+def start_frontend(project_root):
+    """Inicia el frontend"""
+    print_info("Iniciando Frontend (Vite)...")
+    frontend_dir = project_root / "frontend"
+    npm = find_npm()
+    
+    if not npm:
+        print_error("npm no encontrado")
+        return False
+    
+    try:
+        if sys.platform == "win32":
+            cmd = f'"{npm}" run dev'
+            process = subprocess.Popen(
+                cmd,
+                cwd=str(frontend_dir),
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+        else:
+            # Unix: bash -i para cargar perfiles (NVM, etc)
+            cmd = f'"{npm}" run dev'
+            process = subprocess.Popen(
+                cmd,
+                cwd=str(frontend_dir),
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                preexec_fn=os.setsid
+            )
+        
+        RUNNING_PROCESSES.append(process)
+        
+        # Esperar a que el puerto esté disponible
+        print_info("Esperando Frontend (max 25s)...")
+        for attempt in range(25):
+            time.sleep(1)
+            if check_port_in_use(5173):
+                print_success(f"Frontend iniciado (PID: {process.pid})")
+                print_info("  🌐 http://localhost:5173")
+                return True
+        
+        print_error("Frontend no respondió después de 25 segundos")
+        return False
+        
+    except Exception as e:
+        print_error(f"Error iniciando Frontend: {str(e)}")
         return False
 
 def main():
-    """Función principal"""
-    print_header("🚀 Expense Categorizer - Iniciar Servicios")
+    """Función principal - One-click starter"""
+    project_root = Path(__file__).parent
     
-    # Verificar si los servicios ya están corriendo
-    services = check_services_running()
+    print_header("🚀 Expense Categorizer - Setup & Start")
     
-    services_running = False
-    if services['backend']:
-        print_warning("Backend ya está corriendo en puerto 8000")
-        services_running = True
-    if services['frontend']:
-        print_warning("Frontend ya está corriendo en puerto 5173")
-        services_running = True
+    # 1. Verificar estructura del proyecto
+    print_info("Verificando estructura del proyecto...")
+    backend_dir = project_root / "backend"
+    frontend_dir = project_root / "frontend"
     
-    # Si algún servicio está corriendo, preguntar si reiniciar
-    if services_running:
-        print_info("")
-        if ask_yes_no("¿Deseas reiniciar los servicios?"):
-            print_info("Deteniendo servicios existentes...")
-            if services['backend']:
-                kill_process_on_port(8000, "Backend")
-            if services['frontend']:
-                kill_process_on_port(5173, "Frontend")
-            # Esperar más tiempo para que los puertos se liberen
-            print_info("Esperando a que los puertos se liberen...")
-            time.sleep(3)
-        else:
-            print_info("Usando servicios existentes")
-            print_header("✨ Servicios Listos")
-            print_info(f"Frontend: http://localhost:5173")
-            print_info(f"Backend: http://localhost:8000")
-            print_info(f"API Docs: http://localhost:8000/docs")
-            print_info("\nPresiona Ctrl+C para detener")
-            try:
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                print("\n" + Colors.YELLOW + "Servicios detenidos" + Colors.RESET)
-            return
-    
-    # Iniciar servicios
-    print_header("Iniciando Servicios")
-    
-    backend_ok = start_backend()
-    if not backend_ok:
-        print_error("No se pudo iniciar el backend")
+    if not backend_dir.exists() or not frontend_dir.exists():
+        print_error("Estructura del proyecto incompleta")
+        print_error(f"Backend: {'✓' if backend_dir.exists() else '✗'}")
+        print_error(f"Frontend: {'✓' if frontend_dir.exists() else '✗'}")
         sys.exit(1)
     
-    frontend_ok = start_frontend()
-    if not frontend_ok:
-        print_error("No se pudo iniciar el frontend")
+    print_success("Estructura del proyecto OK")
+    
+    # 2. Configurar entorno Python
+    print_header("📦 Configurar Python")
+    if not setup_python_environment(project_root):
+        print_error("No se pudo configurar el entorno Python")
         sys.exit(1)
     
-    # Todos los servicios iniciados correctamente
-    print_header("✨ ¡Todos los Servicios están Corriendo!")
-    print_success("Backend: http://localhost:8000")
-    print_success("Frontend: http://localhost:5173")
-    print_success("API Docs: http://localhost:8000/docs")
-    print_info("\nPresiona Ctrl+C para detener los servicios")
+    # 3. Configurar entorno Node.js
+    print_header("📦 Configurar Node.js")
+    if not setup_frontend_environment(project_root):
+        print_error("No se pudo configurar el entorno Node.js")
+        sys.exit(1)
     
+    # 4. Iniciar servicios
+    print_header("🚀 Iniciando Servicios")
+    
+    if not start_backend(project_root):
+        print_error("No se pudo iniciar el Backend")
+        cleanup_processes()
+        sys.exit(1)
+    
+    time.sleep(1)  # Pequeña pausa entre servicios
+    
+    if not start_frontend(project_root):
+        print_error("No se pudo iniciar el Frontend")
+        cleanup_processes()
+        sys.exit(1)
+    
+    # 5. Éxito - servicios corriendo
+    print_header("✨ ¡Servicios Listos!")
+    print_success("Backend (FastAPI)  → http://localhost:8000")
+    print_success("Frontend (Vite)    → http://localhost:5173")
+    print_success("API Docs           → http://localhost:8000/docs")
+    print_info("\n💡 Presiona Ctrl+C para detener todos los servicios\n")
+    
+    # Mantener el script corriendo
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n" + Colors.YELLOW + "Deteniendo servicios..." + Colors.RESET)
-        # Nota: En un caso real, aquí habría que matar los procesos hijos
-        print_info("Servicios detenidos")
+        pass
 
 if __name__ == "__main__":
     main()
