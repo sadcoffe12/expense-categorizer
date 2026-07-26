@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -7,6 +7,10 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DatabaseIcon from '@mui/icons-material/Storage';
@@ -30,6 +34,23 @@ export default function SetupPage({ onSetupComplete }: SetupPageProps) {
   const [fileData, setFileData] = useState<ParseFileResponse | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResults, setImportResults] = useState<any>(null);
+  const [showRecreateDialog, setShowRecreateDialog] = useState(false);
+  const [existingDbInfo, setExistingDbInfo] = useState<any>(null);
+  const [recreateDb, setRecreateDb] = useState(true);
+
+  // Chequear si existe BD anterior
+  useEffect(() => {
+    const checkExistingDatabase = async () => {
+      try {
+        const response = await fetch('/api/setup/check-existing-database');
+        const data = await response.json();
+        setExistingDbInfo(data);
+      } catch (err) {
+        console.error('Error checking existing database:', err);
+      }
+    };
+    checkExistingDatabase();
+  }, []);
 
   const handleSelectUploadType = (type: 'sql' | 'csv') => {
     setUploadType(type);
@@ -71,12 +92,26 @@ export default function SetupPage({ onSetupComplete }: SetupPageProps) {
   const handleMappingComplete = async (mapping: ColumnMapping) => {
     if (!selectedFile) return;
 
+    // Si existe BD y no es recreate, mostrar diálogo
+    if (existingDbInfo?.exists && existingDbInfo?.valid) {
+      setShowRecreateDialog(true);
+      return;
+    }
+
+    // Si no existe BD anterior, proceder directo
+    await performImport(mapping, true);
+  };
+
+  const performImport = async (mapping: ColumnMapping, recreate: boolean) => {
+    if (!selectedFile) return;
+
     setLoading(true);
     setStep('processing');
     setError(null);
+    setShowRecreateDialog(false);
 
     try {
-      const result = await setupAPI.createDatabase(selectedFile, mapping);
+      const result = await setupAPI.createDatabase(selectedFile, mapping, recreate);
 
       if (result.success) {
         setImportResults(result);
@@ -102,8 +137,41 @@ export default function SetupPage({ onSetupComplete }: SetupPageProps) {
     setError(null);
   };
 
+  const fileData_for_mapping = fileData as unknown as ColumnMapping;
+
   return (
     <Container maxWidth="sm">
+      {/* Diálogo: ¿Usar BD existente o recrear? */}
+      <Dialog open={showRecreateDialog} onClose={() => setShowRecreateDialog(false)}>
+        <DialogTitle>BD Existente Detectada</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Se encontró una base de datos existente con {existingDbInfo?.record_count || 0} registros.
+          </Typography>
+          <Typography>
+            ¿Qué deseas hacer?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowRecreateDialog(false)} color="inherit">
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => performImport(fileData_for_mapping, false)}
+            variant="outlined"
+          >
+            Agregar a BD Existente
+          </Button>
+          <Button
+            onClick={() => performImport(fileData_for_mapping, true)}
+            variant="contained"
+            color="warning"
+          >
+            Recrear BD (Sobrescribe)
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Box sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
@@ -182,11 +250,16 @@ export default function SetupPage({ onSetupComplete }: SetupPageProps) {
                 <Button
                   variant="contained"
                   onClick={() => setStep('mapping')}
-                  disabled={fileData.validation_result && !fileData.validation_result.is_valid}
+                  disabled={!fileData.headers || fileData.headers.length === 0}
                 >
                   Continuar →
                 </Button>
               </Box>
+              {fileData.validation_result && !fileData.validation_result.is_valid && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  ⚠️ El archivo tiene algunos datos inválidos, pero puedes continuar. Se importarán solo los registros válidos.
+                </Alert>
+              )}
             </Box>
           )}
 

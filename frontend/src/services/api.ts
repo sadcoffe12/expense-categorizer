@@ -22,10 +22,11 @@ export const setupAPI = {
     return response.data;
   },
 
-  createDatabase: async (file: File, mapping: any): Promise<CreateDatabaseResponse> => {
+  createDatabase: async (file: File, mapping: any, recreate: boolean = true): Promise<CreateDatabaseResponse> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('mapping_json', JSON.stringify(mapping));
+    formData.append('recreate', recreate.toString());
     const response = await apiClient.post('/setup/create-database', formData);
     return response.data;
   },

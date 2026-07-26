@@ -56,3 +56,7 @@ htmlcov/
 !categorization_rules.csv
 *.xlsx
 *.xls
+
+#Folders
+/.temp_files/
+

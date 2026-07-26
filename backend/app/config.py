@@ -35,12 +35,24 @@ class Config:
         return config.get('database_path')
     
     @staticmethod
-    def set_database(database_path: str, source_file: str, mapping: Dict[str, str],
+    def initialize() -> None:
+        """Inicializa config.json vacío si no existe"""
+        if not CONFIG_FILE.exists():
+            empty_config = {
+                'database_path': '',
+                'column_mapping': {},
+                'records_count': 0,
+                'categories_count': 0,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            Config.save(empty_config)
+    
+    @staticmethod
+    def set_database(database_path: str, mapping: Dict[str, str],
                      records_count: int, categories_count: int) -> None:
         """Guarda configuración de BD"""
         config = {
             'database_path': database_path,
-            'source_file': source_file,
             'column_mapping': mapping,
             'records_count': records_count,
             'categories_count': categories_count,

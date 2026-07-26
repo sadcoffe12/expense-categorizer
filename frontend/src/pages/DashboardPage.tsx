@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -9,7 +10,14 @@ import {
   CardContent,
   CircularProgress,
   Alert,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import {
   PieChart,
   Pie,
@@ -47,14 +55,25 @@ interface TrendData {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [trends, setTrends] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showReimportDialog, setShowReimportDialog] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  const handleReimport = () => {
+    setShowReimportDialog(true);
+  };
+
+  const confirmReimport = () => {
+    setShowReimportDialog(false);
+    navigate('/setup');
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -136,10 +155,35 @@ export default function DashboardPage() {
 
   return (
     <Container maxWidth="lg">
+      {/* Diálogo de confirmación para reimportar */}
+      <Dialog open={showReimportDialog} onClose={() => setShowReimportDialog(false)}>
+        <DialogTitle>¿Reimportar Datos?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Esto te llevará a la pantalla de importación. Podrás agregar más datos a tu BD actual o recrearla.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowReimportDialog(false)}>Cancelar</Button>
+          <Button onClick={confirmReimport} variant="contained" color="primary">
+            Continuar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Box sx={{ py: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
-          📊 Dashboard de Gastos
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+            📊 Dashboard de Gastos
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<CloudUploadIcon />}
+            onClick={handleReimport}
+          >
+            Importar de Nuevo
+          </Button>
+        </Box>
 
         {/* Summary Cards */}
         <Grid container spacing={2} sx={{ mb: 4 }}>

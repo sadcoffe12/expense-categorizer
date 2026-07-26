@@ -63,8 +63,12 @@ function App() {
   useEffect(() => {
     const checkConfiguration = async () => {
       try {
-        const status = await configAPI.getStatus();
-        setIsConfigured(status.configured);
+        // Usar el nuevo endpoint que verifica BD
+        const response = await fetch('/api/setup/check-database');
+        const data = await response.json();
+        
+        // Consideramos configured solo si database_status es "database_exists"
+        setIsConfigured(data.status === 'database_exists');
       } catch (error) {
         console.error('Error checking configuration:', error);
         setIsConfigured(false);

@@ -19,6 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Inicializar config.json si no existe
+Config.initialize()
+
 init_db()
 
 # Include all routers

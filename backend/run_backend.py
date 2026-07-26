@@ -14,6 +14,7 @@ import subprocess
 import sys
 import os
 import time
+import socket
 from pathlib import Path
 
 class Colors:
@@ -144,7 +145,17 @@ def main():
         
         # Crear proceso uvicorn
         # Usar un wrapper que ejecute uvicorn directamente
-        uvicorn_cmd = f'"{python_exe}" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
+        # Intentar puerto 8000, si está ocupado usar 8001
+        for port in [8000, 8001, 8002, 8003]:
+            test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = test_sock.connect_ex(('127.0.0.1', port))
+            test_sock.close()
+            if result != 0:  # Puerto disponible
+                uvicorn_cmd = f'"{python_exe}" -m uvicorn app.main:app --host 0.0.0.0 --port {port} --reload'
+                print_success(f"Puerto {port} disponible")
+                break
+        else:
+            uvicorn_cmd = f'"{python_exe}" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
         
         subprocess.run(
             uvicorn_cmd,

@@ -88,13 +88,13 @@ class ColumnMapper:
             if decimal_format:
                 format_hints['monto'] = decimal_format.to_dict()
         
-        # ETAPA 3: Validar muestra de datos (50 filas)
-        sample_size = min(50, len(df))
+        # ETAPA 3: Validar TODAS las filas (no solo muestra)
+        # Validar todas las filas para dar feedback preciso
         problematic_rows = []
         success_count = {'fecha': 0, 'monto': 0, 'categoria': 0}
         total_fields = {'fecha': 0, 'monto': 0, 'categoria': 0}
         
-        for idx in range(sample_size):
+        for idx in range(len(df)):
             row = df.iloc[idx]
             row_issues = []
             
@@ -178,20 +178,27 @@ class ColumnMapper:
         }
         
         # Agregar issues
+        # Solo mostrar sample de issues si hay muchas filas problemáticas
+        max_issues_to_show = 10
         if problematic_rows:
-            # Top 5 filas problemáticas
-            for row_info in problematic_rows[:5]:
+            # Mostrar primeras filas problemáticas
+            for row_info in problematic_rows[:max_issues_to_show]:
                 issues.extend(row_info['issues'])
             
-            # Si hay más, mostrar resumen
-            if len(problematic_rows) > 5:
+            # Si hay más problemas, mostrar resumen
+            if len(problematic_rows) > max_issues_to_show:
                 issues.append(ErrorMessage(
                     ErrorType.UNKNOWN,
-                    f"... y {len(problematic_rows) - 5} filas más tienen problemas",
-                    "Revisa el CSV para asegurar que todos los datos sigan el formato correcto"
+                    f"... y {len(problematic_rows) - max_issues_to_show} filas más tienen problemas",
+                    f"Total de filas con problemas: {len(problematic_rows)} de {len(df)}. Revisa el CSV para asegurar que todos los datos sigan el formato correcto"
                 ))
         
-        is_valid = len(issues) == 0 and stats['invalid_rows'] == 0
+        # La validación es exitosa si NO hay filas con problemas
+        # o si el porcentaje de éxito es muy alto (>90%)
+        total_rows = stats['total_rows']
+        invalid_rate = stats['invalid_rows'] / total_rows if total_rows > 0 else 0
+        is_valid = invalid_rate < 0.1  # Permitir importación si menos del 10% de filas tienen problemas
+        
         return ValidationResult(is_valid, issues, stats, format_hints)
     
     @staticmethod
@@ -219,15 +226,31 @@ class ColumnMapper:
         localizacion = row.get(mapping.get('localizacion'), '') if mapping.get('localizacion') else ''
         notas = row.get(mapping.get('notas'), '') if mapping.get('notas') else ''
         
+        logger.debug(f"transform_row - entrada: fecha_str={fecha_str} (tipo={type(fecha_str).__name__}), monto_str={monto_str} (tipo={type(monto_str).__name__}), concepto={concepto}")
+        
         # Validar que la fecha no sea NaN/NaT/None/vacía
         if pd.isna(fecha_str) or fecha_str == '' or str(fecha_str).lower() in ['nan', 'nat', 'none']:
+            logger.debug(f"transform_row - fecha inválida: pd.isna={pd.isna(fecha_str)}, empty={fecha_str == ''}")
             return None
         
+        # IMPORTANTE: Si la fecha ya es un Timestamp de Pandas (desde XLSX), convertir directo
         try:
-            fecha = TextUtils.parse_date(str(fecha_str))
-            # Validar que parse_date retornó un valor válido
-            if pd.isna(fecha):
-                return None
+            if isinstance(fecha_str, pd.Timestamp):
+                logger.debug(f"transform_row - fecha es Timestamp: {fecha_str}")
+                # Ya es un timestamp parseado desde Excel
+                fecha = fecha_str
+                if pd.isna(fecha):
+                    logger.debug(f"transform_row - Timestamp es NaT")
+                    return None
+            else:
+                logger.debug(f"transform_row - parseando fecha string: {fecha_str}")
+                # Es un string, parsear normalmente
+                fecha = TextUtils.parse_date(str(fecha_str))
+                logger.debug(f"transform_row - parseado: {fecha}")
+                # Validar que parse_date retornó un valor válido
+                if pd.isna(fecha):
+                    logger.debug(f"transform_row - parse_date retornó NaT")
+                    return None
         except Exception as e:
             logger.debug(f"Error parseando fecha '{fecha_str}': {str(e)}")
             return None
@@ -235,11 +258,13 @@ class ColumnMapper:
         # Validar monto válido
         try:
             monto = TextUtils.parse_amount(str(monto_str))
+            logger.debug(f"transform_row - monto parseado: {monto} desde {monto_str}")
         except Exception as e:
             logger.debug(f"Error parseando monto '{monto_str}': {str(e)}")
             return None
         
-        if pd.isna(monto_str) or monto == 0 and str(monto_str).strip() == '':
+        logger.debug(f"transform_row - validando monto: pd.isna(monto_str)={pd.isna(monto_str)}, monto={monto}, condicion final={pd.isna(monto_str) or (monto == 0 and str(monto_str).strip() == '')}")
+        if pd.isna(monto_str) or (monto == 0 and str(monto_str).strip() == ''):
             return None
         
         descripcion_cleaned = TextUtils.normalize_text(str(concepto), is_transaction=True)
@@ -249,7 +274,7 @@ class ColumnMapper:
             categoria = 'Sin categoría'
         
         return {
-            'date': fecha.date(),
+            'date': fecha.date() if isinstance(fecha, pd.Timestamp) else fecha.date() if hasattr(fecha, 'date') else fecha,
             'description': str(concepto),
             'description_cleaned': descripcion_cleaned,
             'amount': float(monto),
